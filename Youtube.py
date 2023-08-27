@@ -89,4 +89,4 @@ with gr.Blocks() as demo:
   pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    demo.launch()
