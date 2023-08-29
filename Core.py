@@ -68,8 +68,8 @@ def get_audio_and_video_files(url):
       if n.endswith("m4a"):
           sound = AudioSegment.from_file(save_dir+n, format='m4a')
           file_handle = sound.export(save_dir+"file.wav", format='wav')
-#  with open("transcript.txt","w") as file:
-#    file.write(docs[0].page_content)
+  with open("transcript.txt","w") as file:
+    file.write(docs[0].page_content)
   return video_file_path, docs[0].page_content, audio_file_path
 
 def summarize_text(text):
