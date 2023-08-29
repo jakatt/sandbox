@@ -126,7 +126,7 @@ def get_conversation_chain(vectorstore):
     return conversation_chain
 
 def myaiapp(url,language):
-  video_file,audio_transcription,audio_file,conversation=get_audio_and_video_files(url)
+  video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
   
   #Summary by OpenAI
   #summary = instructions_and_inputs_to_openai(audio_transcription,language)
@@ -141,7 +141,7 @@ def myaiapp(url,language):
   
   return video_file, audio_transcription, audio_file, summary
 
-def initialize():
+def initialize(msg):
   with open("transcript.txt","r") as file:
     doc=file.read()
   text_chunks = get_text_chunks(doc)
