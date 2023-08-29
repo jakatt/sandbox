@@ -105,7 +105,7 @@ with gr.Blocks() as demo:
   with gr.Tab("Youtube"):
     yt_input=[
         gr.Textbox(label="Youtube",placeholder="Type the Youtube video URL here"),
-        gr.components.Dropdown(label="Summary translation language", choices=LANGS)
+        gr.components.Dropdown(label="Video original language", choices=LANGS)
     ]
     yt_output=[
       gr.Video(label="Video"),
