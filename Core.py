@@ -1,4 +1,4 @@
-# Initialisation
+########### Initialisation ##########
 import os
 import openai
 import sys
@@ -8,12 +8,20 @@ from langchain.document_loaders.parsers import OpenAIWhisperParser
 from langchain.document_loaders.blob_loaders.youtube_audio import YoutubeAudioLoader
 from pydub import AudioSegment
 from pytube import YouTube
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
+import torch
+import langdetect
+model = AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
+tokenizer = AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
+device = 0 if torch.cuda.is_available() else -1
+LANGS = ["ace_Arab", "eng_Latn", "fra_Latn", "spa_Latn"]
 sys.path.append('../..')
 from dotenv import load_dotenv, find_dotenv
 _=load_dotenv(find_dotenv("setvar.env"))
 openai.api_key=os.environ["OPENAI_API_KEY"]
 save_dir="testdocs/"
+######################################
+
 
 def instructions_and_inputs_to_openai(text):
   separator="*****"
@@ -69,19 +77,26 @@ def summarize_text(text):
     summary = summarizer(text, max_length=130, min_length=30, do_sample=False)[0]['summary_text']
     return summary
 
+def translate(text, src_lang, tgt_lang):
+    translation_pipeline = pipeline("translation", model=model, tokenizer=tokenizer, src_lang=src_lang, tgt_lang=tgt_lang, max_length=1000, device=device)
+    result = translation_pipeline(text)
+    return result[0]['translation_text']
+
 def myaiapp(url):
   video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
   
   #Summary by OpenAI
-  #response = instructions_and_inputs_to_openai(audio_transcription)
+  #summary = instructions_and_inputs_to_openai(audio_transcription)
 
   #Summary disabled
-  response="No summary option selected"
+  #summary="Pas d'options de traduction sélectionnées"
   
   #Summary by facebook/bart-large-cnn
-  #response=summarize_text(audio_transcription)
+  summary=summarize_text(audio_transcription)
+
+  translation=translate(summary,"fra_Latn","eng_Latn")
   
-  return video_file, audio_transcription, audio_file, response
+  return video_file, audio_transcription, audio_file, summary,translation
 
 with gr.Blocks() as demo:
   gr.Markdown("""# Youtube transcription
@@ -92,7 +107,8 @@ with gr.Blocks() as demo:
       gr.Video(label="Video"),
       gr.Textbox(label="Audio transcript"),
       gr.Audio(label="Audio"),
-      gr.Textbox(label="Summary")
+      gr.Textbox(label="Summary"),
+      gr.Textbox(label="Translation")
     ]
     yt_button=gr.Button("Process")
     gr.Examples(["https://www.youtube.com/watch?v=0Cn9IBtazjs","https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3"],yt_input)
