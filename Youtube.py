@@ -19,10 +19,10 @@ def instructions_and_inputs_to_openai(text):
   separator="*****"
   messages =  [  
     {'role':'system', 
-    'content':"""You are an assitant who answer in english./
+    'content':"""You are an assitant who answer in french./
     Provide a summary in telegraphic mode with numbered bullets points."""},    
     {'role':'user', 
-    'content':"""Summarize the text between 5 asterisks in english:"""+separator+text+separator},  
+    'content':"""Summarize the text between 5 asterisks"""+separator+text+separator},  
     ] 
   response = get_completion_from_messages(messages, temperature=1)
   return response
@@ -71,14 +71,16 @@ def summarize_text(text):
 
 def myaiapp(url):
   video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
+  
   #Summary by OpenAI
   #response = instructions_and_inputs_to_openai(audio_transcription)
 
   #Summary disabled
-  #response="Enable OpenAI to get the summary"
+  response="No summary option selected"
   
   #Summary by facebook/bart-large-cnn
-  response=summarize_text(audio_transcription)
+  #response=summarize_text(audio_transcription)
+  
   return video_file, audio_transcription, audio_file, response
 
 with gr.Blocks() as demo:
