@@ -6,11 +6,18 @@ import gradio as gr
 from langchain.document_loaders.generic import GenericLoader
 from langchain.document_loaders.parsers import OpenAIWhisperParser
 from langchain.document_loaders.blob_loaders.youtube_audio import YoutubeAudioLoader
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from htmlTemplates import css, bot_template, user_template
+from langchain.llms import HuggingFaceHub
 from pydub import AudioSegment
 from pytube import YouTube
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 import torch
-import langdetect
 model = AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
 tokenizer = AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
 device = 0 if torch.cuda.is_available() else -1
@@ -87,10 +94,10 @@ def myaiapp(url,language):
   video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
   
   #Summary by OpenAI
-  summary = instructions_and_inputs_to_openai(audio_transcription,language)
+  #summary = instructions_and_inputs_to_openai(audio_transcription,language)
 
   #Summary disabled
-  #summary="Pas d'options de traduction sélectionnées"
+  summary="Pas d'options de traduction sélectionnées"
   
   #Summary by facebook/bart-large-cnn
   #summary=summarize_text(audio_transcription)
@@ -118,7 +125,11 @@ with gr.Blocks() as demo:
   with gr.Tab("PDF"):  
     pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
     pdf_output=gr.Textbox(label="Video")
-    pdf_button=gr.Button("Process") 
+    pdf_button=gr.Button("Process")
+  with gr.Tab("Chat with my docs"):
+    chatbot = gr.Chatbot()
+    msg = gr.Textbox()
+    clear = gr.ClearButton([msg, chatbot])
   yt_button.click(myaiapp,inputs=yt_input,outputs=yt_output)
   pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
 
