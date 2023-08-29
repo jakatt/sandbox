@@ -20,15 +20,16 @@ from dotenv import load_dotenv, find_dotenv
 _=load_dotenv(find_dotenv("setvar.env"))
 openai.api_key=os.environ["OPENAI_API_KEY"]
 save_dir="testdocs/"
+LANGS = ["English", "French", "Spanish", "German","Italian","Portuguese"]
 ######################################
 
 
-def instructions_and_inputs_to_openai(text):
+def instructions_and_inputs_to_openai(text,language):
   separator="*****"
   messages =  [  
     {'role':'system', 
-    'content':"""You are an assitant who answer in french./
-    Provide a summary in telegraphic mode with numbered bullets points."""},    
+    'content':f"""You are an assitant who answer in {language}./
+    Provide a summary in telegraphic mode with bullets points as numbers like 1) 2) 3)."""},    
     {'role':'user', 
     'content':"""Summarize the text between 5 asterisks"""+separator+text+separator},  
     ] 
@@ -82,41 +83,43 @@ def translate(text, src_lang, tgt_lang):
     result = translation_pipeline(text)
     return result[0]['translation_text']
 
-def myaiapp(url):
+def myaiapp(url,language):
   video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
   
   #Summary by OpenAI
-  #summary = instructions_and_inputs_to_openai(audio_transcription)
+  summary = instructions_and_inputs_to_openai(audio_transcription,language)
 
   #Summary disabled
   #summary="Pas d'options de traduction sélectionnées"
   
   #Summary by facebook/bart-large-cnn
-  summary=summarize_text(audio_transcription)
+  #summary=summarize_text(audio_transcription)
 
-  translation=translate(summary,"fra_Latn","eng_Latn")
+  #translation=translate(summary,"fra_Latn","eng_Latn")
   
-  return video_file, audio_transcription, audio_file, summary,translation
+  return video_file, audio_transcription, audio_file, summary
 
 with gr.Blocks() as demo:
   gr.Markdown("""# Youtube transcription
     Transcript Youtube video in an audio file that can then be ingested in different manners (e.g.: summary, Q&A on the content...)""")
   with gr.Tab("Youtube"):
-    yt_input= gr.Textbox(label="Youtube",placeholder="Type the Youtube video URL here")
-    yt_outputs=[
+    yt_input=[
+        gr.Textbox(label="Youtube",placeholder="Type the Youtube video URL here"),
+        gr.components.Dropdown(label="Summary translation language", choices=LANGS)
+    ]
+    yt_output=[
       gr.Video(label="Video"),
       gr.Textbox(label="Audio transcript"),
       gr.Audio(label="Audio"),
-      gr.Textbox(label="Summary"),
-      gr.Textbox(label="Translation")
+      gr.Textbox(label="Summary")
     ]
     yt_button=gr.Button("Process")
-    gr.Examples(["https://www.youtube.com/watch?v=0Cn9IBtazjs","https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3"],yt_input)
+    gr.Examples([["https://www.youtube.com/watch?v=0Cn9IBtazjs","French"],["https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3","French"]],yt_input)
   with gr.Tab("PDF"):  
     pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
     pdf_output=gr.Textbox(label="Video")
     pdf_button=gr.Button("Process") 
-  yt_button.click(myaiapp,inputs=yt_input,outputs=yt_outputs)
+  yt_button.click(myaiapp,inputs=yt_input,outputs=yt_output)
   pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
 
 if __name__ == "__main__":
