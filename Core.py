@@ -90,6 +90,12 @@ def translate(text, src_lang, tgt_lang):
     result = translation_pipeline(text)
     return result[0]['translation_text']
 
+def chat(message, chat_history):
+  bot_message = "How are you?"
+  chat_history.append((message, bot_message))
+  return "", chat_history
+
+
 def myaiapp(url,language):
   video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
   
@@ -122,16 +128,18 @@ with gr.Blocks() as demo:
     ]
     yt_button=gr.Button("Process")
     gr.Examples([["https://www.youtube.com/watch?v=0Cn9IBtazjs","French"],["https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3","French"]],yt_input)
-  with gr.Tab("PDF"):  
-    pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
-    pdf_output=gr.Textbox(label="Video")
-    pdf_button=gr.Button("Process")
+  #with gr.Tab("PDF"):  
+  #  pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
+  #  pdf_output=gr.Textbox(label="Video")
+  #  pdf_button=gr.Button("Process")
   with gr.Tab("Chat with my docs"):
     chatbot = gr.Chatbot()
     msg = gr.Textbox()
     clear = gr.ClearButton([msg, chatbot])
+    msg.submit(chat, [msg, chatbot], [msg, chatbot])
+
   yt_button.click(myaiapp,inputs=yt_input,outputs=yt_output)
-  pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
+  #pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
 
 if __name__ == "__main__":
     demo.launch()
