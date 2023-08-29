@@ -8,6 +8,7 @@ from langchain.document_loaders.parsers import OpenAIWhisperParser
 from langchain.document_loaders.blob_loaders.youtube_audio import YoutubeAudioLoader
 from pydub import AudioSegment
 from pytube import YouTube
+from transformers import pipeline
 sys.path.append('../..')
 from dotenv import load_dotenv, find_dotenv
 _=load_dotenv(find_dotenv("setvar.env"))
@@ -62,10 +63,22 @@ def get_audio_and_video_files(url):
 #    file.write(docs[0].page_content)
   return video_file_path, docs[0].page_content, audio_file_path
 
+def summarize_text(text):
+    summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+    #summarizer = pipeline("summarization", model="philschmid/bart-large-cnn-samsum")
+    summary = summarizer(text, max_length=130, min_length=30, do_sample=False)[0]['summary_text']
+    return summary
+
 def myaiapp(url):
   video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
+  #Summary by OpenAI
   #response = instructions_and_inputs_to_openai(audio_transcription)
-  response="Enable OpenAI to get the summary"
+
+  #Summary disabled
+  #response="Enable OpenAI to get the summary"
+  
+  #Summary by facebook/bart-large-cnn
+  response=summarize_text(audio_transcription)
   return video_file, audio_transcription, audio_file, response
 
 with gr.Blocks() as demo:
