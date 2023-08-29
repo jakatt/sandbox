@@ -91,13 +91,42 @@ def translate(text, src_lang, tgt_lang):
     return result[0]['translation_text']
 
 def chat(message, chat_history):
-  bot_message = "How are you?"
+  # get the text chunks
+  bot_message = "Hi there"
   chat_history.append((message, bot_message))
   return "", chat_history
 
+def get_text_chunks(text):
+    text_splitter = CharacterTextSplitter(
+        separator="\n",
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len
+    )
+    chunks = text_splitter.split_text(text)
+    return chunks
+
+def get_vectorstore(text_chunks):
+    embeddings = OpenAIEmbeddings()
+    # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+    vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
+    return vectorstore
+
+def get_conversation_chain(vectorstore):
+    llm = ChatOpenAI()
+    # llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
+
+    memory = ConversationBufferMemory(
+        memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        memory=memory
+    )
+    return conversation_chain
 
 def myaiapp(url,language):
-  video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
+  video_file,audio_transcription,audio_file,conversation=get_audio_and_video_files(url)
   
   #Summary by OpenAI
   #summary = instructions_and_inputs_to_openai(audio_transcription,language)
@@ -111,6 +140,14 @@ def myaiapp(url,language):
   #translation=translate(summary,"fra_Latn","eng_Latn")
   
   return video_file, audio_transcription, audio_file, summary
+
+def initialize():
+  with open("transcript.txt","r") as file:
+    doc=file.read()
+  text_chunks = get_text_chunks(doc)
+  # create vector store
+  vectorstore = get_vectorstore(text_chunks)
+  conversation =  get_conversation_chain(vectorstore)
 
 with gr.Blocks() as demo:
   gr.Markdown("""# Youtube transcription
@@ -135,11 +172,12 @@ with gr.Blocks() as demo:
   with gr.Tab("Chat with my docs"):
     chatbot = gr.Chatbot()
     msg = gr.Textbox()
+    docs_process = gr.Button("Process")
     clear = gr.ClearButton([msg, chatbot])
     msg.submit(chat, [msg, chatbot], [msg, chatbot])
-
   yt_button.click(myaiapp,inputs=yt_input,outputs=yt_output)
   #pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
+  docs_process.click(initialize,inputs=msg,outputs=chatbot)
 
 if __name__ == "__main__":
     demo.launch()
