@@ -91,8 +91,7 @@ def translate(text, src_lang, tgt_lang):
     return result[0]['translation_text']
 
 def chat(message, chat_history):
-  # get the text chunks
-  bot_message = "Hi there"
+  bot_message = "Answer from the bot"
   chat_history.append((message, bot_message))
   return "", chat_history
 
@@ -148,6 +147,7 @@ def initialize(msg):
   # create vector store
   vectorstore = get_vectorstore(text_chunks)
   conversation =  get_conversation_chain(vectorstore)
+  return conversation
 
 with gr.Blocks() as demo:
   gr.Markdown("""# Youtube transcription
