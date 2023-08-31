@@ -1,13 +1,11 @@
 /__pycache__
 /setvar.env
-Summarization.ipynb
 summarization.py
 Summarization2.py
 play.py
 chatpdf.py
 htmlTemplates.py
 /testdocs
-file.pdf
-transcript.txt
-play.ipynb
-langchaintraining.ipynb
+*.pdf
+*.txt
+*.ipynb
