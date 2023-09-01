@@ -5,6 +5,7 @@ Summarization2.py
 play.py
 chatpdf.py
 htmlTemplates.py
+chatwithmydocs.py
 /testdocs
 *.pdf
 *.txt
