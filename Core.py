@@ -146,6 +146,7 @@ def myaiapp(url,language):
   return video_file, audio_transcription, audio_file, summary
 
 def chat(message,chat_history):
+  status=""
   #loader = WebBaseLoader("https://scienceetonnante.com/2014/11/24/interstellar-et-le-paradoxe-des-jumeaux/")
   if os.path.isfile("testdocs/transcript.txt"):
     loader = TextLoader('testdocs/transcript.txt')
@@ -163,11 +164,15 @@ def chat(message,chat_history):
     splits = text_splitter.split_documents(docs)
     embedding = OpenAIEmbeddings()
     persist_directory = 'testdocs/chroma/'
+    status="oneoff"
     vectordb = Chroma.from_documents(
         documents=splits,
         embedding=embedding,
         persist_directory=persist_directory
     )
+  if os.path.isdir("testdocs/chroma") and status!="oneoff":
+    persist_directory = 'testdocs/chroma/'
+    vectordb = Chroma(persist_directory=persist_directory,embedding_function=OpenAIEmbeddings())
   llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
   memory = ConversationBufferMemory(
       memory_key="chat_history",
@@ -201,17 +206,17 @@ with gr.Blocks() as demo:
     ]
     yt_button=gr.Button("Process")
     gr.Examples([["https://www.youtube.com/watch?v=0Cn9IBtazjs","French"],["https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3","French"]],yt_input)
-  with gr.Tab("PDF"):  
-    pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
-    pdf_output=gr.Textbox(label="Video")
-    pdf_button=gr.Button("Process")
+  #with gr.Tab("PDF"):  
+    #pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
+    #pdf_output=gr.Textbox(label="Video")
+    #pdf_button=gr.Button("Process")
   with gr.Tab("Chat with my docs"):
     chatbot = gr.Chatbot()
     msg = gr.Textbox()
     clear = gr.ClearButton([msg, chatbot])
     msg.submit(chat, [msg, chatbot], [msg, chatbot])
   yt_button.click(myaiapp,inputs=yt_input,outputs=yt_output)
-  pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
+  #pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
 
 if __name__ == "__main__":
     demo.launch()
