@@ -1,5 +1,6 @@
 ########### Initialisation ##########
 import os
+import shutil
 import openai
 import sys
 import gradio as gr
@@ -35,6 +36,8 @@ _=load_dotenv(find_dotenv("setvar.env"))
 openai.api_key=os.environ["OPENAI_API_KEY"]
 save_dir="testdocs/"
 LANGS = ["English", "French", "Spanish", "German","Italian","Portuguese"]
+if os.path.isdir("testdocs/chroma"):
+  shutil.rmtree("testdocs/chroma", ignore_errors=True)
 ######################################
 
 
@@ -82,7 +85,7 @@ def get_audio_and_video_files(url):
       if n.endswith("m4a"):
           sound = AudioSegment.from_file(save_dir+n, format='m4a')
           file_handle = sound.export(save_dir+"file.wav", format='wav')
-  with open("transcript.txt","w") as file:
+  with open(save_dir+"transcript.txt","w") as file:
     file.write(docs[0].page_content)
   return video_file_path, docs[0].page_content, audio_file_path
 
@@ -96,13 +99,6 @@ def translate(text, src_lang, tgt_lang):
     translation_pipeline = pipeline("translation", model=model, tokenizer=tokenizer, src_lang=src_lang, tgt_lang=tgt_lang, max_length=1000, device=device)
     result = translation_pipeline(text)
     return result[0]['translation_text']
-
-def chat(message, chat_history):
-  bot_message = "Answer from the bot"
-  chat_history.append((message, bot_message))
-  return "", chat_history
-
-
 
 def get_text_chunks(text):
     text_splitter = CharacterTextSplitter(
@@ -149,27 +145,29 @@ def myaiapp(url,language):
   
   return video_file, audio_transcription, audio_file, summary
 
-def chatok(message,chat_history):
+def chat(message,chat_history):
   #loader = WebBaseLoader("https://scienceetonnante.com/2014/11/24/interstellar-et-le-paradoxe-des-jumeaux/")
-  loader = TextLoader('testdocs/transcript.txt')
-  docs = loader.load()
-  chunk_size =10000
-  chunk_overlap = 20
-  text_splitter = RecursiveCharacterTextSplitter(
-      chunk_size = chunk_size,
-      chunk_overlap = chunk_overlap,
-      #separators=["\n\n", "\n", "(?<=\. )", " ", ""]
-      separators=["(?<=\. ),", " ", ""]
-      #separators=["."]
-  )
-  splits = text_splitter.split_documents(docs)
-  embedding = OpenAIEmbeddings()
-  persist_directory = 'testdocs/chroma/'
-  vectordb = Chroma.from_documents(
-      documents=splits,
-      embedding=embedding,
-      persist_directory=persist_directory
-  )
+  if os.path.isfile("testdocs/transcript.txt"):
+    loader = TextLoader('testdocs/transcript.txt')
+  if not os.path.isdir("testdocs/chroma"):
+    docs = loader.load()
+    chunk_size =10000
+    chunk_overlap = 20
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size = chunk_size,
+        chunk_overlap = chunk_overlap,
+        #separators=["\n\n", "\n", "(?<=\. )", " ", ""]
+        separators=["(?<=\. ),", " ", ""]
+        #separators=["."]
+    )
+    splits = text_splitter.split_documents(docs)
+    embedding = OpenAIEmbeddings()
+    persist_directory = 'testdocs/chroma/'
+    vectordb = Chroma.from_documents(
+        documents=splits,
+        embedding=embedding,
+        persist_directory=persist_directory
+    )
   llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
   memory = ConversationBufferMemory(
       memory_key="chat_history",
@@ -193,7 +191,7 @@ with gr.Blocks() as demo:
   with gr.Tab("Youtube"):
     yt_input=[
         gr.Textbox(label="Youtube",placeholder="Type the Youtube video URL here"),
-        gr.components.Dropdown(label="Video original language", choices=LANGS)
+        gr.components.Dropdown(label="Video summary language", choices=LANGS)
     ]
     yt_output=[
       gr.Video(label="Video"),
@@ -203,19 +201,17 @@ with gr.Blocks() as demo:
     ]
     yt_button=gr.Button("Process")
     gr.Examples([["https://www.youtube.com/watch?v=0Cn9IBtazjs","French"],["https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3","French"]],yt_input)
-  #with gr.Tab("PDF"):  
-  #  pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
-  #  pdf_output=gr.Textbox(label="Video")
-  #  pdf_button=gr.Button("Process")
+  with gr.Tab("PDF"):  
+    pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
+    pdf_output=gr.Textbox(label="Video")
+    pdf_button=gr.Button("Process")
   with gr.Tab("Chat with my docs"):
     chatbot = gr.Chatbot()
     msg = gr.Textbox()
-    docs_process = gr.Button("Process")
     clear = gr.ClearButton([msg, chatbot])
-    msg.submit(chatok, [msg, chatbot], [msg, chatbot])
+    msg.submit(chat, [msg, chatbot], [msg, chatbot])
   yt_button.click(myaiapp,inputs=yt_input,outputs=yt_output)
-  #pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
-  #docs_process.click(initialize,inputs=msg,outputs=chatbot)
+  pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
 
 if __name__ == "__main__":
     demo.launch()
