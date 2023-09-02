@@ -6,10 +6,16 @@ import gradio as gr
 from langchain.document_loaders.generic import GenericLoader
 from langchain.document_loaders.parsers import OpenAIWhisperParser
 from langchain.document_loaders.blob_loaders.youtube_audio import YoutubeAudioLoader
+from langchain.document_loaders import WebBaseLoader
+from langchain.document_loaders import TextLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.chains import RetrievalQA
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
@@ -18,6 +24,7 @@ from pydub import AudioSegment
 from pytube import YouTube
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 import torch
+
 model = AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
 tokenizer = AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
 device = 0 if torch.cuda.is_available() else -1
@@ -95,6 +102,8 @@ def chat(message, chat_history):
   chat_history.append((message, bot_message))
   return "", chat_history
 
+
+
 def get_text_chunks(text):
     text_splitter = CharacterTextSplitter(
         separator="\n",
@@ -140,14 +149,43 @@ def myaiapp(url,language):
   
   return video_file, audio_transcription, audio_file, summary
 
-def initialize(msg):
-  with open("transcript.txt","r") as file:
-    doc=file.read()
-  text_chunks = get_text_chunks(doc)
-  # create vector store
-  vectorstore = get_vectorstore(text_chunks)
-  conversation =  get_conversation_chain(vectorstore)
-  return conversation
+def chatok(message,chat_history):
+  #loader = WebBaseLoader("https://scienceetonnante.com/2014/11/24/interstellar-et-le-paradoxe-des-jumeaux/")
+  loader = TextLoader('testdocs/transcript.txt')
+  docs = loader.load()
+  chunk_size =10000
+  chunk_overlap = 20
+  text_splitter = RecursiveCharacterTextSplitter(
+      chunk_size = chunk_size,
+      chunk_overlap = chunk_overlap,
+      #separators=["\n\n", "\n", "(?<=\. )", " ", ""]
+      separators=["(?<=\. ),", " ", ""]
+      #separators=["."]
+  )
+  splits = text_splitter.split_documents(docs)
+  embedding = OpenAIEmbeddings()
+  persist_directory = 'testdocs/chroma/'
+  vectordb = Chroma.from_documents(
+      documents=splits,
+      embedding=embedding,
+      persist_directory=persist_directory
+  )
+  llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+  memory = ConversationBufferMemory(
+      memory_key="chat_history",
+      return_messages=True
+  )
+  retriever=vectordb.as_retriever()
+  qa = ConversationalRetrievalChain.from_llm(
+      llm,
+      retriever=retriever,
+      memory=memory
+  )
+  question = message
+  result = qa({"question": question})
+  bot_message = result['answer']
+  chat_history.append((message, bot_message))
+  return "",chat_history
 
 with gr.Blocks() as demo:
   gr.Markdown("""# Youtube transcription
@@ -174,10 +212,10 @@ with gr.Blocks() as demo:
     msg = gr.Textbox()
     docs_process = gr.Button("Process")
     clear = gr.ClearButton([msg, chatbot])
-    msg.submit(chat, [msg, chatbot], [msg, chatbot])
+    msg.submit(chatok, [msg, chatbot], [msg, chatbot])
   yt_button.click(myaiapp,inputs=yt_input,outputs=yt_output)
   #pdf_button.click(myaiapp,inputs=pdf_input,outputs=pdf_output)
-  docs_process.click(initialize,inputs=msg,outputs=chatbot)
+  #docs_process.click(initialize,inputs=msg,outputs=chatbot)
 
 if __name__ == "__main__":
     demo.launch()
