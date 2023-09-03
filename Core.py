@@ -100,35 +100,6 @@ def translate(text, src_lang, tgt_lang):
     result = translation_pipeline(text)
     return result[0]['translation_text']
 
-def get_text_chunks(text):
-    text_splitter = CharacterTextSplitter(
-        separator="\n",
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len
-    )
-    chunks = text_splitter.split_text(text)
-    return chunks
-
-def get_vectorstore(text_chunks):
-    embeddings = OpenAIEmbeddings()
-    # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
-    vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
-    return vectorstore
-
-def get_conversation_chain(vectorstore):
-    llm = ChatOpenAI()
-    # llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
-
-    memory = ConversationBufferMemory(
-        memory_key='chat_history', return_messages=True)
-    conversation_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=vectorstore.as_retriever(),
-        memory=memory
-    )
-    return conversation_chain
-
 def myaiapp(url,language):
   video_file,audio_transcription,audio_file=get_audio_and_video_files(url)
   
@@ -136,10 +107,10 @@ def myaiapp(url,language):
   #summary = instructions_and_inputs_to_openai(audio_transcription,language)
 
   #Summary disabled
-  summary="Pas d'options de traduction sélectionnées"
+  #summary="Pas d'options de traduction sélectionnées"
   
   #Summary by facebook/bart-large-cnn
-  #summary=summarize_text(audio_transcription)
+  summary=summarize_text(audio_transcription)
 
   #translation=translate(summary,"fra_Latn","eng_Latn")
   
@@ -205,7 +176,7 @@ with gr.Blocks() as demo:
       gr.Textbox(label="Summary")
     ]
     yt_button=gr.Button("Process")
-    gr.Examples([["https://www.youtube.com/watch?v=0Cn9IBtazjs","French"],["https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3","French"]],yt_input)
+    gr.Examples([["https://www.youtube.com/watch?v=0Cn9IBtazjs","French"],["https://www.youtube.com/watch?v=ZHjr3AdriWs&list=PLDrBFlreuiQuhpAFD6UTgec5MG7ArZ6eB&index=3","French"],["https://www.youtube.com/watch?v=3CKhlfcBtjo","French"],["https://www.youtube.com/watch?v=p7HKvqRI_Bo","English"],["https://www.youtube.com/watch?v=DlA2jMueIyc","English"]],yt_input)
   #with gr.Tab("PDF"):  
     #pdf_input= gr.Textbox(label="PDF",placeholder="Type the PDF file URL here")
     #pdf_output=gr.Textbox(label="Video")
